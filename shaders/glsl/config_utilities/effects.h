@@ -77,6 +77,10 @@
 // Value - Sunrise and sunset tint on the clouds (0-1)
 #define CLOUD_SUN 0.30
 
+// Toggle - Fade the cloud layer into the night colour. Vanilla keeps clouds pale
+// grey after dark, which is what makes them read as a grid of pale pads
+#define CLOUD_NIGHT_FADE
+
 /*""*/
 
 #endif // NEWB_EFFECTS

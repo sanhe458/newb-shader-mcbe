@@ -39,6 +39,17 @@ void main(){
 	color = renderClouds(color, worldPos.xz*cloud_size, t, rain);
 	color.rgb = mix(color.rgb,vec3(color.g*FOG_COLOR.g*3.5),rain*0.8);
 
+	#ifdef CLOUD_NIGHT_FADE
+		// The whole cloud plane is one huge semi transparent sheet, so at night
+		// the layer is brighter than the sky it sits in: every alpha blob shows
+		// up as a pale pad and the thin parts between them as a white veil.
+		// FOG_COLOR is the cheapest honest day/night signal on this pipeline.
+		float fogLum = max(max(FOG_COLOR.r,FOG_COLOR.g),FOG_COLOR.b);
+		float night = 1.0-smoothstep(0.05,0.24,fogLum);
+		color.rgb *= 1.0-night*0.86;
+		color.a *= 1.0-night*0.55;
+	#endif
+
 	#ifdef CLOUD_SUN
 		// warm the clouds by how warm the fog colour already is: sunrise and
 		// sunset tint them without needing a sun direction
