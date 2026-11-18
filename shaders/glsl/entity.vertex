@@ -10,6 +10,7 @@
 #include "config_utilities/sky.h"
 #include "config_utilities/global.h"
 #include "utilities/matrix.glsl"
+#include "config_utilities/effects.h"
 
 #ifdef USE_SKINNING
 #include "uniformAnimationConstants.h"
@@ -189,6 +190,19 @@ mistColor = mix(mistColor,vec4(fogColor.rgb,1.0),fogColor.a);
 
 // lighting
 light = lighting(entitySpacePosition, entitySpaceNormal);
+
+#ifdef RIM_LIGHT
+	#ifndef UI_ENTITY
+		// view space rim: one extra matrix multiply per vertex, entities are a
+		// small slice of the vertex budget so this stays cheap
+		highp vec4 viewPosition = WORLDVIEW * entitySpacePosition;
+		highp vec3 viewNormal = normalize(matmulxyz(WORLDVIEW,entitySpaceNormal));
+		highp vec3 viewDir = normalize(vec3(1e-4)-viewPosition.xyz);
+		float rim = 1.0-abs(dot(viewNormal,viewDir));
+		rim *= rim; rim *= rim;
+		light += rim*RIM_LIGHT*(0.35+0.65*TILE_LIGHT_COLOR.b)*vec3(1.0,0.97,0.9);
+	#endif
+#endif
 
 // soft shadow
 light *= 1.05-0.3*float(POSITION.y>0.0);

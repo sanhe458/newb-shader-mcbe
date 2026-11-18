@@ -39,6 +39,14 @@ void main(){
 	color = renderClouds(color, worldPos.xz*cloud_size, t, rain);
 	color.rgb = mix(color.rgb,vec3(color.g*FOG_COLOR.g*3.5),rain*0.8);
 
+	#ifdef CLOUD_LAYER
+		// second noise layer at another offset: wherever the two overlap the
+		// cloud reads as thicker instead of staying one flat sheet
+		float layer2 = cloudNoise2D(worldPos.xz*cloud_size + vec2(0.43,-0.29), t+2.1, rain);
+		color.a = max(color.a, layer2*0.55);
+		color.rgb += vec3(0.06,0.07,0.09)*layer2*min(color.a*3.0,1.0);
+	#endif
+
 	// displace cloud vertex
 	pos.y += color.a*cloud_depth*(10.0-7.0*rain);
 

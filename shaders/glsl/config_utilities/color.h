@@ -28,6 +28,12 @@
 // Toggle + Color - Tinting
 //#define TINT vec3(1.0,0.75,0.5)
 
+// Value - Split toning, cool shadows and warm highlights (0-1)
+#define SPLIT_TONE 0.35
+
+// Value - Per channel gain separation, a cheap lens character (0-0.1)
+#define CHROMA_SHIFT 0.02
+
 
 /*""""""""""""""""""""""""""""""""""""""*/
 
@@ -99,6 +105,20 @@ vec3 colorCorrection(vec3 color){
 
 	// actually supposed to be gamma correction
 	color = contrastLift(color);
+
+	#ifdef SPLIT_TONE
+		// graded after the tonemap so it survives highlight compression:
+		// one luminance dot and two mixes
+		float lum = dot(color, vec3(0.21,0.71,0.08));
+		vec3 grade = mix(vec3(0.92,1.0,1.10), vec3(1.08,1.0,0.92), clamp(lum*1.4,0.0,1.0));
+		color *= mix(vec3(1.0), grade, SPLIT_TONE);
+	#endif
+
+	#ifdef CHROMA_SHIFT
+		// red and blue gain apart by a hair - free, and reads as lens character
+		color.r *= 1.0+CHROMA_SHIFT;
+		color.b *= 1.0-CHROMA_SHIFT;
+	#endif
 
 	#ifdef SATURATION
 		color = mix(vec3(dot(color,vec3(0.21, 0.71, 0.08))), color, SATURATION);

@@ -14,6 +14,7 @@
 
 #include "uniformShaderConstants.h"
 #include "util.h"
+#include "config_utilities/effects.h"
 
 varying vec3 horizon_color;
 varying vec3 pos;
@@ -33,7 +34,16 @@ void main(){
 
 	// end sky gradient
 	vec3 color = horizon_color*smoothstep(0.0,1.0,grad);
-	color += diffuse.rgb*(1.0-grad*grad); // stars
+
+	float starMask = 1.0-grad*grad; // stars
+	#ifdef STAR_TWINKLE
+		// the stars are a texture here, they cannot move: the twinkle is a per
+		// pixel shimmer whose phase comes from the uv, so some fade in and out
+		float tw = 0.5+0.5*sin(TIME*2.2 + uv.x*63.0 + uv.y*47.0);
+		tw *= tw*tw;
+		starMask *= 1.0-STAR_TWINKLE*tw;
+	#endif
+	color += diffuse.rgb*starMask;
 
 	// end void gradient
 	float glow = max((-sphereY-0.5)*2.0,0.0);

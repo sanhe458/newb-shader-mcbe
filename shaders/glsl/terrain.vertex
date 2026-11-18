@@ -51,6 +51,7 @@
 #include "config_utilities/clouds.h"
 #include "config_utilities/global.h"
 #include "config_utilities/terrain.h"
+#include "config_utilities/effects.h"
 
 uniform highp float TOTAL_REAL_WORLD_TIME;
 uniform lowp sampler2D TEXTURE_0;
@@ -232,6 +233,11 @@ if(nether || end){
 
 	// torch light
 	light += torchLight;
+
+	#ifdef BOUNCE_LIGHT
+		// nether bounce: lava and fire light the space back up
+		if(nether){ light += vec3(1.0,0.28,0.08)*BOUNCE_LIGHT*(1.0-uv1.y)*lit.y; }
+	#endif
 }
 else{
 	// overworld lighting
@@ -264,6 +270,12 @@ else{
 
 	// extra indirect light
 	light += vec3(0.3*lit.y*uv1.y*(1.2-shadow)*lightIntensity);
+
+	#ifdef BOUNCE_LIGHT
+		// one fake bounce: skylight coming back off the ground, tinted by the
+		// horizon so it warms up at sunrise on its own
+		light += BOUNCE_LIGHT*(0.35+0.65*lit.y)*mix(vec3(0.55,0.62,0.78),horizonCol,0.55)*max(1.0-uv1.y,0.0);
+	#endif
 
 	// torch light
 	light += torchLight*(1.0-(max(shadow,0.65*lit.y)*dayFactor*(1.0-0.3*rainFactor)));
@@ -352,6 +364,16 @@ float camDist = length(wPos);
 			if(isPlants && isColored && !(isGrassTop || isVines || isTreeLeaves || isTop)){amplitude *= bPos.y>0.0 ? bPos.y-1.0 : 0.0 ;}
 		#endif
 
+		#ifdef GUST_WIND
+			// the gust front travels across the world, so neighbouring plants are
+			// driven with a delay instead of the whole field snapping at once
+			float gust = sin(t*wave_speed*0.45 + dot(wPos.xz,vec2(0.31,0.19)));
+			gust = 0.5+0.5*gust;
+			gust *= gust;
+			phaseDiff += gust*1.2;
+			amplitude *= 0.65+0.35*gust;
+		#endif
+
 		float wave = 1.0+mix(
 			sin(t*wave_speed + phaseDiff),
 			sin(t*wave_speed*1.5 + phaseDiff),
@@ -400,7 +422,23 @@ float camDist = length(wPos);
 		if(isWater && camDist < 16.0){
 			worldPos.y += 0.002;
 			worldPos.xy += WATER_WAVE*vec2(1.0,min(15.0*fract(cPos.y),1.5))*sin( t*2.0 + dot(cPos,vec3(rd)));
+
+			#ifdef WATER_DETAIL
+				// second ripple at another frequency and direction, so the surface
+				// stops looking like one clean sine wave
+				worldPos.xy += WATER_WAVE*WATER_DETAIL*vec2(-0.7,1.0)*sin(t*4.7 + dot(cPos,vec3(rd*1.7)));
+			#endif
 		}
+		#ifdef RAIN_RIPPLE
+			if(isWater && rainFactor > 0.0 && camDist < 12.0){
+				// a water face is four vertices, so a real concentric ring cannot
+				// be drawn here - this reads as local rain impacts instead
+				float dent = fastRand(vec2(floor(cPos.x),floor(cPos.z))+t*0.5);
+				float pulse = sin(t*3.2 + dent*6.2832);
+				pulse *= pulse; pulse *= pulse; pulse *= pulse;
+				worldPos.y -= 0.04*rainFactor*pulse;
+			}
+		#endif
 	#endif
 #endif // ALPHA_TEST
 #endif //!BYPASS_PIXEL_SHADER
