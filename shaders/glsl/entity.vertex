@@ -38,7 +38,7 @@ attribute vec4 NORMAL;
 #endif
 
 varying vec4 mistColor;
-varying lowp vec4 wetRefl;
+varying mediump vec4 wetRefl;
 varying vec3 light;
 varying float rainFactor;
 

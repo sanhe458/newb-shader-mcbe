@@ -15,7 +15,12 @@
 //#define EXPOSURE 1.3
 
 // Value - Contrast
-#define CONTRAST 0.74
+// 0.75 is the fast path (two sqrt instead of three pow per pixel).
+// If you change this to any other value, also enable CONTRAST_EXACT below.
+#define CONTRAST 0.75
+
+// Toggle - Use exact pow(CONTRAST) instead of the sqrt approximation
+//#define CONTRAST_EXACT
 
 // Toggle + Value - Saturation
 //#define SATURATION 1.4
@@ -72,6 +77,19 @@ vec3 tonemap(vec3 x){
 
 #endif
 
+// Contrast lift.
+// x^0.75 == sqrt(sqrt(x^3)): two sqrt instructions instead of a pow
+// (exp2+log2) per channel, and this runs on every terrain/entity/sky/banner
+// pixel of the screen. Enable CONTRAST_EXACT for any other CONTRAST value.
+vec3 contrastLift(vec3 color){
+#ifdef CONTRAST_EXACT
+	return pow(color, vec3(CONTRAST));
+#else
+	color = color*color*color;
+	return sqrt(sqrt(color));
+#endif
+}
+
 vec3 colorCorrection(vec3 color){
 	#ifdef EXPOSURE
 		color *= EXPOSURE;
@@ -80,7 +98,7 @@ vec3 colorCorrection(vec3 color){
 	color = tonemap(color);
 
 	// actually supposed to be gamma correction
-	color = pow(color, vec3(CONTRAST));
+	color = contrastLift(color);
 
 	#ifdef SATURATION
 		color = mix(vec3(dot(color,vec3(0.21, 0.71, 0.08))), color, SATURATION);

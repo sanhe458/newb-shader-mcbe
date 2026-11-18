@@ -56,12 +56,14 @@ vec4 renderMist(vec3 fog, float dist, float lit, float rain, bool nether, bool u
 		mist.rgb = fog*vec3(1.0,1.1-0.1*rain,1.4-0.4*rain);
 	}
 
-	// exponential mist
-	mist.a = 0.31-0.3*exp(-dist*dist*density);
-
 	if(underwater){
 		mist.rgb = fog;
 		mist.a = 0.2+0.5*min(dist*dist,1.0);
+	}
+	else{
+		// exponential mist - underwater replaces mist.a below, so the exp
+		// was previously evaluated and thrown away every underwater vertex
+		mist.a = 0.31-0.3*exp(-dist*dist*density);
 	}
 
 	return mist;

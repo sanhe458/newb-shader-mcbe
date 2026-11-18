@@ -27,7 +27,7 @@ varying lowp float shade;
 
 #ifdef FOG
 	varying float wPosY;
-	varying lowp vec4 wetRefl;
+	varying mediump vec4 wetRefl;
 #endif
 
 #if defined(BLEND) || defined(FAR_BLEND)

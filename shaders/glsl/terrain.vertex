@@ -29,7 +29,7 @@
 
 #ifdef FOG
 	varying float wPosY;
-	varying lowp vec4 wetRefl;
+	varying mediump vec4 wetRefl;
 #endif
 
 #if defined(BLEND) || defined(FAR_BLEND)
@@ -60,7 +60,9 @@ attribute vec2 TEXCOORD_0;
 attribute vec2 TEXCOORD_1;
 
 const float rd = 1.57079; // pi by 2
-const float shadowIntensity = 1.0-shadow_intensity;
+// inverse of the shadow_intensity config macro above - named differently on
+// purpose so it is obvious the two move in opposite directions
+const float softShadowBase = 1.0-shadow_intensity;
 
 // bool between function
 bool is(float val,float val1,float val2){
@@ -75,16 +77,21 @@ float getWaterAlpha(vec3 col){
 }
 
 // simpler rand for disp,wetmap
-float fastRand(vec2 n){ 
-	float a = cos( dot(n,vec2(4.2683,1.367)) );
-	float b = dot( n,vec2(1.367,4.683) );
-	return fract(a+b);
+// sin/cos free hash - one fract instead of a transcendental per call
+float fastRand(vec2 n){
+	return fract(dot(n,vec2(4.2683,1.367))*43758.5453 + dot(n,vec2(1.367,4.683)));
 }
 
 // water displacement map (also used by caustic)
 float disp(vec3 pos, highp float t){
 	float val = 0.5 + 0.5*sin(t*1.7+((pos.x+pos.y)*rd));
 	return mix(fastRand(pos.xz),fastRand(pos.xz+vec2(1.0)),val);
+}
+
+// wind strength - a function so it is only evaluated where it is really used
+// (plant waves, lantern swings) instead of on every single vertex
+float getWindStrength(float litY, highp float t, float rainFactor){
+	return litY*(noise1D(t*0.36) + (rainFactor*0.4));
 }
 
 // sky reflection on plane - used by water, wet reflection
@@ -247,7 +254,7 @@ else{
 	// make shadow a bit softer and more softer when raining
 	shadow += uv1.y > 0.85 ? (0.2+0.3*rainFactor)*(1.0-shadow) : 0.0;
 
-	shadow = max(shadow,(shadowIntensity + (0.6*shadow_intensity*nightFactor))*lit.y);
+	shadow = max(shadow,(softShadowBase + (0.6*shadow_intensity*nightFactor))*lit.y);
 	shadow *= shade>0.8 ? 1.0 : 0.8;
 
 	// direct light from top
@@ -274,7 +281,6 @@ float camDist = length(wPos);
 	// texture space - (64x32) textures in uv0.xy
 	vec2 texMap = uv0*vec2(64.0,32.0);
 	float texPosY = fract(texMap.y);
-	vec4 tex0 = texture2D(TEXTURE_0,uv0);
 
 	int texNoX = int(texMap.x);
 	int texNoY = int(texMap.y);
@@ -282,13 +288,17 @@ float camDist = length(wPos);
 	// x and z distance from block center
 	vec2 bPosC = abs(bPos.xz-0.5);
 
-	float windStrength = lit.y*(noise1D(t*0.36) + (rainFactor*0.4));
 
 	#ifdef PLANTS_WAVE
 
 	#ifdef SEASONS
 		bool shouldWave = true;
 	#else
+
+	// vertex texture fetch only for tinted blocks (grass, leaves, plants).
+	// Glass, iron bars, ladders, torches and chains are alpha tested too but
+	// never tinted, so they would pay for a VTF they do not use.
+	vec4 tex0 = isColored ? texture2D(TEXTURE_0,uv0) : vec4(0.0,0.0,0.0,1.0);
 
 	float tex0lum = tex0.r+tex0.g+tex0.b;
 
@@ -330,7 +340,7 @@ float camDist = length(wPos);
 	if(shouldWave && camDist<20.0){
 		// values must be a multiple of pi/4
 		float phaseDiff = dot(cPos,vec3(0.7854)) + fastRand(tiledCpos.xz + tiledCpos.y);
-		float amplitude = PLANTS_WAVE*windStrength;
+		float amplitude = PLANTS_WAVE*getWindStrength(lit.y,t,rainFactor);
 
 		#ifdef SEASONS
 			amplitude *= 0.5;
@@ -372,7 +382,7 @@ float camDist = length(wPos);
 			// simple random wave for angle
 			highp vec2 theta = vec2(t + offset,t*1.4 + offset);
 			theta = sin(vec2(theta.x,theta.x+0.7)) + rainFactor*sin(vec2(theta.y,theta.y+0.7));
-			theta *= LANTERN_WAVE*windStrength;
+			theta *= LANTERN_WAVE*getWindStrength(lit.y,t,rainFactor);
 
 			vec2 sinA = sin(theta);
 			vec2 cosA = cos(theta);
@@ -406,13 +416,19 @@ float camDist = length(wPos);
 
 float relativeDist = camDist / RENDER_DISTANCE;
 
+#if defined(MAYBE_WATER) && (defined(FANCY) || defined(USE_ANGLE_BLEND_FADE))
+	// only computed when more than one stage needs it, otherwise this would
+	// add work instead of saving it
+	float waterBaseAlpha = getWaterAlpha(COLOR.rgb);
+#endif
+
 #ifdef BLEND
 	// vertex based transparency (mostly for water)
 	if(color.a < 0.95) {
 		#ifdef FANCY
 			// fade out blended water layer to opaque layer
 			float alphaFadeOut = clamp(camDist/FAR_CHUNKS_DISTANCE, 0.0, 1.0);
-			color.a = getWaterAlpha(COLOR.rgb);
+			color.a = waterBaseAlpha;
 			color.a = color.a + (0.5-0.5*color.a)*alphaFadeOut;
 		#else
 			color.a = 1.0;
@@ -495,7 +511,7 @@ if(isWater){
 
 	color.rgb = waterCol*(1.0-0.4*fresnel) + waterRefl*fresnel;
 	#ifdef USE_ANGLE_BLEND_FADE
-		color.a = getWaterAlpha(COLOR.rgb) + opacity*(1.0-color.a);
+		color.a = waterBaseAlpha + opacity*(1.0-color.a);
 	#else
 		color.a = color.a + (1.0-color.a)*opacity*opacity;
 	#endif
