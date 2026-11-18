@@ -1,7 +1,7 @@
 {
     "format_version": 2,
     "header": {
-        "description": " An aesthetic shader for Minecraft!\n \n v1.2.0beta  §3https://mcpedl.com/newb-shader/",
+        "description": "Newb Shader 1.20b era (GLSL, MCPE 1.18) - performance reviewed, extended with cloud shadows, leaf light transmission, wet sun band, underwater shafts, thin meteors, AO curve.\nAll toggles live in shaders/glsl/config_utilities/effects.h",
         "name": "Newb Shader Opt v1.2.2",
         "uuid": "95f774cf-4afa-73e7-a21a-72146307b1d2",
         "version": [
@@ -17,7 +17,7 @@
     },
     "modules": [
         {
-            "description": " An aesthetic shader for Minecraft!",
+            "description": "Newb Shader 1.20b era (GLSL, MCPE 1.18) - performance reviewed, extended with cloud shadows, leaf light transmission, wet sun band, underwater shafts, thin meteors, AO curve.\nAll toggles live in shaders/glsl/config_utilities/effects.h",
             "type": "resources",
             "uuid": "900f3d8b-37b4-465f-8f56-941687e36c35",
             "version": [
