@@ -84,6 +84,22 @@ float fastRand(vec2 n){
 	return fract(dot(n,vec2(4.2683,1.367))*43758.5453 + dot(n,vec2(1.367,4.683)));
 }
 
+// cheap bilinear noise for cloud shadows. cloudNoise2D is sin based and far too
+// heavy to run on every terrain vertex, this is four fract based hashes.
+float cloudShadowNoise(vec2 p){
+	vec2 p0 = floor(p);
+	vec2 u = p-p0;
+	u *= u*(3.0-2.0*u);
+	vec2 v = 1.0-u;
+
+	float c1 = fastRand(p0);
+	float c2 = fastRand(p0+vec2(1.0,0.0));
+	float c3 = fastRand(p0+vec2(0.0,1.0));
+	float c4 = fastRand(p0+vec2(1.0));
+
+	return v.y*(c1*v.x+c2*u.x) + u.y*(c3*v.x+c4*u.x);
+}
+
 // water displacement map (also used by caustic)
 float disp(vec3 pos, highp float t){
 	float val = 0.5 + 0.5*sin(t*1.7+((pos.x+pos.y)*rd));
@@ -144,6 +160,9 @@ void main(){
 	vec3 cPos = POSITION.xyz;
 	vec3 bPos = fract(cPos);
 	vec3 tiledCpos = cPos*vec3(cPos.x<15.99,cPos.y<15.99,cPos.z<15.99);
+
+	// distance from the camera, needed by the mist, the waves and the cloud shadows
+	float camDist = length(wPos);
 
 #ifndef BYPASS_PIXEL_SHADER
 
@@ -266,6 +285,15 @@ else{
 
 	// direct light from top
 	float dirLight = shadow*(1.0-uv1.x*nightFactor)*lightIntensity;
+
+	#ifdef CLOUD_SHADOW
+		// moving cloud shadows, same scale and drift as the cloud layer above so
+		// the shadow you walk through lines up with what you see in the sky
+		if(!underWater && dot(wPos,wPos) < CLOUD_SHADOW_DIST*CLOUD_SHADOW_DIST){
+			float cs = cloudShadowNoise(wPos.xz*cloud_size + vec2(t*cloud_speed));
+			dirLight *= 1.0-CLOUD_SHADOW*clamp((cs-0.38)*2.2,0.0,1.0);
+		}
+	#endif
 	light += dirLight*sunLightTint(night_color,morning_color,noon_color,dayFactor,rainFactor);
 
 	// extra indirect light
@@ -282,13 +310,27 @@ else{
 }
 
 // darken at crevices
-light *= COLOR.g > 0.35 ? 1.0 : 0.8;
+#ifdef AO_SHARPEN
+	// stretch the vanilla ambient occlusion out of the vertex colour green into
+	// a smooth curve, instead of a two step multiply at 0.35
+	float ao = clamp(COLOR.g*1.55,0.0,1.0);
+	ao = ao*ao*(3.0-2.0*ao);
+	light *= 0.7+0.3*ao;
+#else
+	light *= COLOR.g > 0.35 ? 1.0 : 0.8;
+#endif
 
 // brighten tree leaves
 if(isTree){light *= 1.25;}
 
-// distance from the camera (used by mist, fog, water)
-float camDist = length(wPos);
+#ifdef LEAF_TRANSMIT
+	// leaves are thin: looking up at them means the light comes through the leaf
+	// instead of being blocked, so add a transmission term
+	if(isTree){
+		float upView = wPos.y/max(camDist,0.001);
+		light += LEAF_TRANSMIT*max(upView,0.0)*lit.y*vec3(0.9,1.0,0.75);
+	}
+#endif
 
 #ifdef ALPHA_TEST
 	// texture space - (64x32) textures in uv0.xy
@@ -573,6 +615,16 @@ if(isWater){
 		caustics += 0.25+0.25*sin(t + (cPos.x + cPos.z)*rd);
 
 		light += caustics*underWaterColor*(0.1+lit.y+(lit.x*0.7))*caustic_intensity;
+
+		#ifdef UNDERWATER_SHAFTS
+			// vertical shafts: azimuthal bands driven by the view direction, so
+			// they stay anchored in the world while you look around
+			vec2 az = normalize(vec2(viewDir.x,viewDir.z)+vec2(1e-4));
+			float shafts = sin(dot(az,vec2(9.0,6.0)) + sin(dot(az,vec2(2.0,4.0))*2.0));
+			shafts = max(shafts,0.0);
+			shafts *= shafts;
+			light += underWaterColor*shafts*UNDERWATER_SHAFTS*(0.3+0.7*lit.y);
+		#endif
 	}
 #endif //UNDERWATER
 
@@ -601,6 +653,12 @@ if(rainFactor > 0.0){
 
 		wetRefl.rgb = getRainSkyRefl(horizonCol,zenithCol,cosR);
 		wetRefl.rgb += 0.9*torchLight;
+
+		#ifdef WET_SUN
+			// wet asphalt picks up the same sun band the water surface shows,
+			// built from the same horizon colour so the two agree
+			wetRefl.rgb += getSunRefl(viewDir.x,horizonEdgeCol.r)*WET_SUN;
+		#endif
 		wetRefl.a = calculateFresnel(cosR,0.03)*rainFactor*wetness;
 		wetRefl.a *= clamp(2.0-(2.0*camDist/endDist),0.0,0.9); // fade out
 

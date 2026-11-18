@@ -39,6 +39,13 @@ void main(){
 	color = renderClouds(color, worldPos.xz*cloud_size, t, rain);
 	color.rgb = mix(color.rgb,vec3(color.g*FOG_COLOR.g*3.5),rain*0.8);
 
+	#ifdef CLOUD_SUN
+		// warm the clouds by how warm the fog colour already is: sunrise and
+		// sunset tint them without needing a sun direction
+		float warm = clamp(FOG_COLOR.r-FOG_COLOR.b*0.85,0.0,1.0);
+		color.rgb += vec3(1.0,0.55,0.22)*CLOUD_SUN*warm*min(color.a*2.0,1.0);
+	#endif
+
 	#ifdef CLOUD_LAYER
 		// second noise layer at another offset: wherever the two overlap the
 		// cloud reads as thicker instead of staying one flat sheet
