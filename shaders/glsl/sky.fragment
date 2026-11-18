@@ -55,21 +55,31 @@ void main(){
 	#endif
 
 	#ifdef SHOOTING_STARS
-		// two meteors on fixed paths. No texture, no varying, and only sky pixels
-		// pay for it. The sky brightness gate keeps them out of the daytime.
+		// two meteors on fixed great circle paths. Measured in 3D against the ray
+		// from the start point, so the streak keeps a constant angular thickness
+		// instead of stretching into a fat blob on the horizon.
 		float meteorSky = clamp(1.0-max(max(zenith_color.r,zenith_color.g),zenith_color.b)*2.2,0.0,1.0);
-		vec2 plane = vec2(dot(dir,vec3(0.87,0.0,0.49)), dir.y);
+		vec3 meteorCol = vec3(0.82,0.9,1.0)*SHOOTING_STARS*meteorSky;
 		for(int i=0;i<2;i++){
 			float fi = float(i);
-			float cycle = fract(TIME*(0.32+fi*0.11) + fi*0.73);
-			vec2 head = vec2(-0.35+fi*0.55+cycle*1.1, 0.35+fi*0.22-cycle*0.5);
-			vec2 tail = head-vec2(0.16,-0.07);
-			vec2 pa = plane-head;
-			vec2 ba = tail-head;
-			float hSeg = clamp(dot(pa,ba)/dot(ba,ba),0.0,1.0);
-			float dist = length(pa-ba*hSeg);
-			float bright = (1.0-smoothstep(0.0,0.05,dist))*(1.0-smoothstep(0.05,0.35,abs(cycle-0.5)))*meteorSky;
-			skyColor += vec3(0.85,0.92,1.0)*SHOOTING_STARS*bright;
+			// kept up in the sky, a meteor that dies behind the horizon fog is a waste
+			vec3 s0 = normalize(vec3(-0.62,0.62+fi*0.10,0.50));
+			vec3 s1 = normalize(vec3(0.50+fi*0.12,0.34+fi*0.06,0.80));
+			vec3 axis = normalize(s1-s0);
+			float span = length(s1-s0);
+
+			// the visible part is a short window of the cycle, so it streaks
+			float phase = fract(TIME*(0.23+fi*0.08)+fi*0.61);
+			float travel = clamp((phase-0.40)/0.22,0.0,1.0);
+			float alive = smoothstep(0.0,0.02,travel)*(1.0-smoothstep(0.98,1.0,travel));
+
+			float along = dot(dir-s0,axis);
+			float side = length(dir-s0-axis*along);
+			float back = travel*span-along; // >0 behind the head
+
+			float core = (1.0-smoothstep(0.0,0.008,side))*alive;
+			float taper = clamp(1.0-back/0.26,0.0,1.0)*step(0.0,back);
+			skyColor += meteorCol*core*taper*taper;
 		}
 	#endif
 

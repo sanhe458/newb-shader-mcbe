@@ -64,6 +64,7 @@ float cloudNoise2D(vec2 p, highp float t, float rain){
 
 	p += vec2(t);
 	p.x += sin(p.y*0.4 + t);
+	p.y += sin(p.x*0.37 - t*0.8)*0.85; // second warp axis: without it the value noise lattice stays a regular grid and the clouds read as rows of ellipses
 
 	vec2 p0 = floor(p);
 	vec2 u = p-p0;
@@ -90,8 +91,11 @@ vec4 renderClouds(vec4 color, vec2 uv, highp float t, float rain){
 	// rainy clouds color
 	color.rgb = mix(color.rgb,vec3(0.7),rain*0.5);
 
-	// highlight at edge
-	color.rgb += vec3(0.6,0.6,1.0)*(0.2-cloudShadow);
+	// highlight at edge. Gated by how bright the cloud base already is: at night
+	// this term drew a pale outline around every cloud cell, which is what made
+	// the night sky look like a grid of rings
+	float rimGate = smoothstep(0.07,0.28,max(max(color.r,color.g),color.b));
+	color.rgb += vec3(0.6,0.6,1.0)*max(0.2-cloudShadow,0.0)*rimGate;
 
 	// cloud shadow
 	color.rgb *= (1.0-cloudShadow*3.0*cloud_shadow);
