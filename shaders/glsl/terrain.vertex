@@ -47,6 +47,7 @@
 #include "utilities/detectors.glsl"
 #include "config_utilities/sky.h"
 #include "utilities/noise.glsl"
+#include "utilities/sky_gradient.glsl"
 #include "config_utilities/clouds.h"
 #include "config_utilities/global.h"
 #include "config_utilities/terrain.h"

@@ -7,6 +7,9 @@
       "vrGeometryShader": "shaders/renderchunk.geometry",
       "fragmentShader": "shaders/terrain.fragment",
 
+      // TEXEL_AA makes every atlas fetch a 4 tap filter. It is the most expensive
+      // thing in the terrain fragment shader, drop the define and switch the
+      // samplerStates below from "TexelAA" to "Bilinear" for a low end preset.
       "+defines": [ "LOW_PRECISION", "TEXEL_AA", "ATLAS_TEXTURE" ],
       "+states": [ "DisableAlphaWrite" ],
 

@@ -10,8 +10,6 @@
 #include "utilities/detectors.glsl"
 #include "config_utilities/clouds.h"
 
-#include "config_utilities/global.h"
-
 uniform highp float TOTAL_REAL_WORLD_TIME;
 
 attribute mediump vec4 POSITION;

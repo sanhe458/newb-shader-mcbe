@@ -8,6 +8,7 @@
 #include "utilities/detectors.glsl"
 #include "config_utilities/sky.h"
 #include "config_utilities/global.h"
+#include "utilities/matrix.glsl"
 
 #ifdef USE_SKINNING
 #include "uniformAnimationConstants.h"
@@ -38,21 +39,16 @@ attribute vec4 COLOR;
 	varying vec4 mistColor;
 #endif
 
-#ifdef ENABLE_LIGHT
+#if defined(ENABLE_LIGHT) || defined(ENABLE_FOG)
+	// ENABLE_FOG tints the light by environment (nether/end/underwater), so
+	// the varying has to exist whenever either stage is compiled in.
+	// Previously ENABLE_FOG without ENABLE_LIGHT could not compile.
 	varying vec3 light;
 #endif
 
 #ifndef DISABLE_TINTING
 	varying vec4 color;
 #endif
-
-vec3 matmulxyz(mat4 w, vec4 p){
-	return vec3(
-		dot(vec4(w[0][0],w[1][0],w[2][0],w[3][0]),p),
-		dot(vec4(w[0][1],w[1][1],w[2][1],w[3][1]),p),
-		dot(vec4(w[0][2],w[1][2],w[2][2],w[3][2]),p)
-	);
-}
 
 vec3 lighting(){
 	float intensity;
@@ -128,7 +124,7 @@ uv.zw = (TEXCOORD_0.xy * BANNER_UV_OFFSETS_AND_SCALES[0].zw) + BANNER_UV_OFFSETS
 	color.a = float(frameIndex<=0);
 #endif
 
-#ifdef ENABLE_LIGHT
+#if defined(ENABLE_LIGHT) || defined(ENABLE_FOG)
 	light.rgb = lighting();
 #endif
 

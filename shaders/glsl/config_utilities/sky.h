@@ -108,27 +108,7 @@ vec3 sunLightTint(vec3 night_color,vec3 morning_color,vec3 day_color,float dayFa
 // Colors end
 
 
-// 1D sky with three color gradient
-// A copy of this is in sky.fragment, make changes there aswell
-vec3 renderSky(vec3 reddishTint, vec3 horizonColor, vec3 zenithColor, float h){
-
-//h = h+0.04;
-//if(h > 0.0){h /= 1.04;}
-//else{h /= -0.96;}
-
-	h = 1.0-h*h;
-
-	float hsq = h*h;
-
-	// gradient 1  h^16
-	// gradient 2  h^8 mix h^2
-	float gradient1 = hsq*hsq*hsq*hsq;
-	float gradient2 = 0.6*gradient1 + 0.4*hsq;
-	gradient1 *= gradient1;
-
-	horizonColor = mix(horizonColor, reddishTint, gradient1);
-	return mix(zenithColor,horizonColor, gradient2 );
-
-}
+// 1D sky gradient: moved to utilities/sky_gradient.glsl so the sky dome
+// (sky.fragment) and the fog/reflection users share one implementation.
 
 
