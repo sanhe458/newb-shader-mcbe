@@ -15,11 +15,15 @@ varying vec3 horizon_color;
 varying vec3 horizon_edge_color;
 varying vec3 wPos;
 
+// declared locally like FOG_COLOR in sky.vertex: the sky pass does not include
+// the shader constants header
+uniform highp float TIME;
+
 void main(){
 	float len = sqrt(dot(wPos.xyz,wPos.xyz));
 	float sphereY = max(0.0,wPos.y/len);
 
-	#if defined(SUN_SHAFTS) || defined(MILKY_WAY)
+	#if defined(SUN_SHAFTS) || defined(MILKY_WAY) || defined(SHOOTING_STARS)
 		// only normalized when an effect actually needs the direction
 		vec3 dir = wPos/len;
 	#endif
@@ -48,6 +52,25 @@ void main(){
 		float grain = sin(dot(dir.xy,vec2(37.0,23.0)))*0.5+0.5;
 		grain *= sin(dot(dir.yz,vec2(19.0,41.0)))*0.5+0.5;
 		skyColor += vec3(0.55,0.62,0.92)*MILKY_WAY*bandMask*grain*skyDark*max(sphereY,0.0);
+	#endif
+
+	#ifdef SHOOTING_STARS
+		// two meteors on fixed paths. No texture, no varying, and only sky pixels
+		// pay for it. The sky brightness gate keeps them out of the daytime.
+		float meteorSky = clamp(1.0-max(max(zenith_color.r,zenith_color.g),zenith_color.b)*2.2,0.0,1.0);
+		vec2 plane = vec2(dot(dir,vec3(0.87,0.0,0.49)), dir.y);
+		for(int i=0;i<2;i++){
+			float fi = float(i);
+			float cycle = fract(TIME*(0.32+fi*0.11) + fi*0.73);
+			vec2 head = vec2(-0.35+fi*0.55+cycle*1.1, 0.35+fi*0.22-cycle*0.5);
+			vec2 tail = head-vec2(0.16,-0.07);
+			vec2 pa = plane-head;
+			vec2 ba = tail-head;
+			float hSeg = clamp(dot(pa,ba)/dot(ba,ba),0.0,1.0);
+			float dist = length(pa-ba*hSeg);
+			float bright = (1.0-smoothstep(0.0,0.05,dist))*(1.0-smoothstep(0.05,0.35,abs(cycle-0.5)))*meteorSky;
+			skyColor += vec3(0.85,0.92,1.0)*SHOOTING_STARS*bright;
+		}
 	#endif
 
 	skyColor = colorCorrection(skyColor);

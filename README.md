@@ -40,6 +40,15 @@ Every effect is a compile time switch in `shaders/glsl/config_utilities/effects.
 | star twinkle | `STAR_TWINKLE` | end sky fragment | one sine |
 | entity rim light | `RIM_LIGHT` | entity vertex | two matrix multiplies per entity vertex |
 | second cloud layer | `CLOUD_LAYER` | cloud vertex | one extra cloud noise sample |
+| moving cloud shadows on the ground | `CLOUD_SHADOW`, `CLOUD_SHADOW_DIST` | terrain vertex | four fract hashes, not sampled past 48 blocks |
+| light passing through tree leaves | `LEAF_TRANSMIT` | terrain vertex, leaves only | two ops |
+| sun band on rain wet ground | `WET_SUN` | terrain vertex, rain only | reuses the water sun maths |
+| vertical shafts underwater | `UNDERWATER_SHAFTS` | terrain vertex, underwater only | one sine pair |
+| shooting stars | `SHOOTING_STARS` | sky fragment | two segment tests per meteor |
+| sunrise tint on clouds | `CLOUD_SUN` | cloud vertex | a few ops |
+| smooth ambient occlusion | `AO_SHARPEN` | terrain vertex | three ops, replaces a two step multiply |
+
+The cloud shadow is the expensive one: it samples noise on every terrain vertex within 48 blocks. If a low end device struggles, comment `CLOUD_SHADOW` out first, it is the only new effect that touches all terrain vertices.
 
 ### Not implemented on purpose
 
