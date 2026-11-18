@@ -2,21 +2,35 @@
     "format_version": 2,
     "header": {
         "description": " An aesthetic shader for Minecraft!\n \n v1.2.0beta  §3https://mcpedl.com/newb-shader/",
-        "name": "Newb Shader",
+        "name": "Newb Shader Opt v1.2.2",
         "uuid": "95f774cf-4afa-73e7-a21a-72146307b1d2",
-        "version": [1, 1, 97],
-        "min_engine_version": [1, 14, 10]
+        "version": [
+            1,
+            2,
+            2
+        ],
+        "min_engine_version": [
+            1,
+            14,
+            10
+        ]
     },
     "modules": [
         {
             "description": " An aesthetic shader for Minecraft!",
             "type": "resources",
             "uuid": "900f3d8b-37b4-465f-8f56-941687e36c35",
-            "version": [1, 1, 97]
+            "version": [
+                1,
+                2,
+                2
+            ]
         }
     ],
     "metadata": {
-        "authors": ["devendrn"],
+        "authors": [
+            "devendrn"
+        ],
         "license": "MIT License",
         "url": "https://mcpedl.com/newb-shader/"
     }
