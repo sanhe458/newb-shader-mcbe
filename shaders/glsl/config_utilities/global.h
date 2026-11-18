@@ -61,8 +61,8 @@ vec4 renderMist(vec3 fog, float dist, float lit, float rain, bool nether, bool u
 		mist.a = 0.2+0.5*min(dist*dist,1.0);
 	}
 	else{
-		// exponential mist - underwater replaces mist.a below, so the exp
-		// was previously evaluated and thrown away every underwater vertex
+		// exponential mist - underwater overwrites mist.a anyway, so the exp
+		// used to be evaluated and thrown away on every underwater vertex
 		mist.a = 0.31-0.3*exp(-dist*dist*density);
 	}
 

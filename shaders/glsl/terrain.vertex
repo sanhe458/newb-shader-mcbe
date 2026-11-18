@@ -289,7 +289,6 @@ float camDist = length(wPos);
 	// x and z distance from block center
 	vec2 bPosC = abs(bPos.xz-0.5);
 
-
 	#ifdef PLANTS_WAVE
 
 	#ifdef SEASONS
